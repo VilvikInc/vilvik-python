@@ -4,6 +4,20 @@ All notable changes to the `vilvik` Python SDK are recorded here. The format
 follows [Keep a Changelog](https://keepachangelog.com/), and the project uses
 [semantic versioning](https://semver.org/).
 
+## [0.2.2]
+
+### Changed
+
+- The package summary now describes Vilvik as an optimization platform rather
+  than naming a single method.
+- The README links to the SDK guide and the REST API reference.
+
+### Fixed
+
+- The `User-Agent` header now tracks the package version instead of staying
+  pinned to an older string. The version is defined in one place so it cannot
+  drift again.
+
 ## [0.2.1]
 
 Packaging and project-metadata release. No changes to the public API.
@@ -12,8 +26,6 @@ Packaging and project-metadata release. No changes to the public API.
 
 - The SDK now lives in its own repository and the distribution bundles a license
   file. Project URLs point at the new repository.
-- The package summary now describes Vilvik as an optimization platform rather
-  than naming a single method.
 
 ## [0.2.0]
 
@@ -43,5 +55,6 @@ First public release.
   `NotFoundError`, `ValidationError`, `RateLimitError`, `APIError`,
   `TimeoutError`, `CaptureError`).
 
+[0.2.2]: https://github.com/VilvikInc/vilvik-python/releases/tag/v0.2.2
 [0.2.1]: https://github.com/VilvikInc/vilvik-python/releases/tag/v0.2.1
 [0.2.0]: https://github.com/VilvikInc/vilvik-python/releases/tag/v0.2.0

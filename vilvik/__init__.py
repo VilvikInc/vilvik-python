@@ -62,4 +62,4 @@ __all__ = [
     "run",
 ]
 
-__version__ = "0.2.1"
+from vilvik._version import __version__

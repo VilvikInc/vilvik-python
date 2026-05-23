@@ -1,8 +1,9 @@
 name: release
 
-# Publishes to PyPI when a version tag (e.g. v0.2.0) is pushed. Uploads use
-# PyPI trusted publishing, so no API token is stored in the repository. The
-# PyPI project must list this repo and workflow as a trusted publisher first.
+# On a version tag (e.g. v0.2.2) this builds the package once, publishes it to
+# PyPI via trusted publishing (no API token stored in the repo), and attaches
+# the built wheel and sdist to a GitHub Release for the tag. The PyPI project
+# must list this repo and workflow as a trusted publisher first.
 
 on:
   push:
@@ -42,3 +43,24 @@ jobs:
           path: dist/
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+
+  github-release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - name: Attach the built files to the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "$GITHUB_REF_NAME" \
+            --generate-notes \
+          || gh release upload "$GITHUB_REF_NAME" dist/* \
+            --repo "$GITHUB_REPOSITORY" --clobber

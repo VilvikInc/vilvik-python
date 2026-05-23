@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vilvik"
-version = "0.2.1"
+dynamic = ["version"]
 description = "Official Python SDK for the Vilvik optimization cloud API."
 readme = "README.md"
 requires-python = ">=3.9"
@@ -48,3 +48,6 @@ Issues = "https://github.com/VilvikInc/vilvik-python/issues"
 [tool.setuptools.packages.find]
 include = ["vilvik*"]
 exclude = ["tests*"]
+
+[tool.setuptools.dynamic]
+version = { attr = "vilvik._version.__version__" }

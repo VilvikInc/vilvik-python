@@ -15,6 +15,7 @@ from typing import Any, Dict, Optional
 
 import requests
 
+from vilvik._version import __version__
 from vilvik.exceptions import (
     APIError,
     AuthenticationError,
@@ -25,7 +26,7 @@ from vilvik.exceptions import (
 
 DEFAULT_BASE_URL = "https://vilvik.com/api/v1"
 DEFAULT_TIMEOUT_SECONDS = 60.0
-DEFAULT_USER_AGENT = "vilvik-python/0.2.0"
+DEFAULT_USER_AGENT = f"vilvik-python/{__version__}"
 
 logger = logging.getLogger("vilvik")
 
