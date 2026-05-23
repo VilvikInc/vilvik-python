@@ -26,7 +26,7 @@ def _parse_dt(value: Any) -> Optional[datetime]:
 
 @dataclass
 class Submission:
-    """A queued, running, or completed GA run."""
+    """A queued, running, or completed optimization run."""
 
     id: str
     status: str

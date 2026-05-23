@@ -42,7 +42,7 @@ class Submissions(_Resource):
         idempotency_key: Optional[str] = None,
         **ga_params: Any,
     ) -> Submission:
-        """POST /submissions — enqueue a new GA run.
+        """POST /submissions — enqueue a new optimization run.
 
         Extra `ga_params` are forwarded as-is so callers can pass any of
         the PyGAD knobs (`mutation_probability`, `parent_selection_type`,

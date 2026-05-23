@@ -12,6 +12,8 @@ Packaging and project-metadata release. No changes to the public API.
 
 - The SDK now lives in its own repository and the distribution bundles a license
   file. Project URLs point at the new repository.
+- The package summary now describes Vilvik as an optimization platform rather
+  than naming a single method.
 
 ## [0.2.0]
 

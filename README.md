@@ -1,8 +1,10 @@
 # vilvik
 
-Official Python SDK for [Vilvik](https://vilvik.com), a cloud platform that
-runs Genetic Algorithm (PyGAD) workloads with a REST API, scoped keys, and
-webhook delivery.
+Official Python SDK for [Vilvik](https://vilvik.com), a cloud platform for
+running and tracking optimization jobs through a REST API, with scoped keys
+and webhook delivery. Vilvik currently runs Genetic Algorithm (PyGAD)
+workloads, and this SDK gives your Python code a typed client, a
+submit-and-wait helper, and a clean error hierarchy to drive them.
 
 **Documentation:** [SDK guide](https://vilvik.com/docs/sdk/) ·
 [REST API reference](https://vilvik.com/docs/api/) ·

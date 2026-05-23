@@ -1,4 +1,4 @@
-"""Vilvik — Python SDK for the Vilvik genetic-algorithm cloud API.
+"""Vilvik — Python SDK for the Vilvik optimization cloud API.
 
 Quick start:
 
