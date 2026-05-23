@@ -4,6 +4,10 @@ Official Python SDK for [Vilvik](https://vilvik.com), a cloud platform that
 runs Genetic Algorithm (PyGAD) workloads with a REST API, scoped keys, and
 webhook delivery.
 
+**Documentation:** [SDK guide](https://vilvik.com/docs/sdk/) ·
+[REST API reference](https://vilvik.com/docs/api/) ·
+[all docs](https://vilvik.com/docs/)
+
 ```bash
 pip install vilvik
 ```
@@ -109,6 +113,25 @@ except vilvik.VilvikError:
 | `base_url`      | `https://vilvik.com/api/v1`        | Override for staging or self-hosted instances.     |
 | `timeout`       | `60.0` seconds                     | Per-HTTP-request timeout.                          |
 | `max_retries`   | `2`                                | Idempotent (GET / HEAD) retries on network errors. |
+
+## Documentation
+
+The full SDK guide lives at <https://vilvik.com/docs/sdk/>, with a page per
+feature:
+
+- [Installation and configuration](https://vilvik.com/docs/sdk/installation/)
+- [Submissions](https://vilvik.com/docs/sdk/submissions/),
+  [results](https://vilvik.com/docs/sdk/results/), and the
+  [`run()` helper](https://vilvik.com/docs/sdk/run-helper/)
+- [Importing a local PyGAD run](https://vilvik.com/docs/sdk/imports/),
+  [code uploads](https://vilvik.com/docs/sdk/code-uploads/), and
+  [webhooks](https://vilvik.com/docs/sdk/webhooks/)
+- [Error handling](https://vilvik.com/docs/sdk/errors/) and
+  [worked examples](https://vilvik.com/docs/sdk/examples/)
+
+Every SDK page links to the matching
+[REST API reference](https://vilvik.com/docs/api/), so you can drop down to the
+raw HTTP calls whenever you need to.
 
 ## Development
 
