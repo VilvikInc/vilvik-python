@@ -1,0 +1,379 @@
+"""Unit tests for `vilvik.Client` and its resource sub-clients."""
+
+from __future__ import annotations
+
+import json
+import os
+
+import pytest
+
+import vilvik
+from vilvik.client import Client
+
+BASE = "https://example.test/api/v1"
+
+
+# --------------- Construction / config ---------------
+
+
+def test_client_requires_api_key(monkeypatch):
+    monkeypatch.delenv("VILVIK_API_KEY", raising=False)
+    with pytest.raises(ValueError):
+        Client()
+
+
+def test_client_reads_api_key_from_env(monkeypatch):
+    monkeypatch.setenv("VILVIK_API_KEY", "vlk_from_env")
+    c = Client(base_url=BASE)
+    # Smoke check: no exception means the env var was picked up.
+    assert c.base_url == BASE
+
+
+# --------------- Submissions ---------------
+
+
+def test_submissions_create_round_trip(mock_api, client):
+    mock_api.add(
+        "POST",
+        f"{BASE}/submissions",
+        json={
+            "id": "sub_abc",
+            "status": "queued",
+            "status_url": f"{BASE}/submissions/sub_abc",
+            "result_url": f"{BASE}/results?submission_id=sub_abc",
+            "created_at": "2026-05-18T10:00:00Z",
+            "request_id": "req_1",
+        },
+        status=202,
+    )
+
+    sub = client.submissions.create(
+        fitness_func="def fitness_func(g, s, i): return 0",
+        num_genes=3,
+        num_generations=10,
+        sol_per_pop=20,
+    )
+
+    assert sub.id == "sub_abc"
+    assert sub.status == "queued"
+    assert not sub.is_terminal
+    assert sub.created_at is not None
+
+    call = mock_api.calls[0]
+    assert call.request.headers["Authorization"] == f"Bearer {client._transport.api_key}"
+    assert call.request.headers["Idempotency-Key"]
+    body = json.loads(call.request.body)
+    assert body["num_genes"] == 3
+    assert body["num_generations"] == 10
+    assert body["fitness_func"].startswith("def fitness_func")
+
+
+def test_submissions_create_forwards_extra_ga_params(mock_api, client):
+    mock_api.add(
+        "POST",
+        f"{BASE}/submissions",
+        json={"id": "sub_x", "status": "queued"},
+        status=202,
+    )
+    client.submissions.create(
+        fitness_func="x",
+        num_genes=1,
+        mutation_probability=0.05,
+        parent_selection_type="tournament",
+    )
+    body = json.loads(mock_api.calls[0].request.body)
+    assert body["mutation_probability"] == 0.05
+    assert body["parent_selection_type"] == "tournament"
+
+
+def test_submissions_get(mock_api, client):
+    mock_api.add(
+        "GET",
+        f"{BASE}/submissions/sub_abc",
+        json={"id": "sub_abc", "status": "succeeded"},
+    )
+    sub = client.submissions.get("sub_abc")
+    assert sub.is_terminal
+    assert sub.status == "succeeded"
+
+
+def test_submissions_list_and_iter_all(mock_api, client):
+    mock_api.add(
+        "GET",
+        f"{BASE}/submissions",
+        json={
+            "data": [
+                {"id": "a", "status": "queued"},
+                {"id": "b", "status": "running"},
+            ],
+            "next_cursor": "cur_2",
+        },
+    )
+    mock_api.add(
+        "GET",
+        f"{BASE}/submissions",
+        json={
+            "data": [{"id": "c", "status": "succeeded"}],
+            "next_cursor": None,
+        },
+    )
+    ids = [s.id for s in client.submissions.iter_all()]
+    assert ids == ["a", "b", "c"]
+
+
+def test_submissions_reexecute_sends_overrides(mock_api, client):
+    mock_api.add(
+        "POST",
+        f"{BASE}/submissions/sub_abc/reexecute",
+        json={"id": "sub_def", "status": "queued"},
+        status=202,
+    )
+    client.submissions.reexecute("sub_abc", mutation_probability=0.2)
+    body = json.loads(mock_api.calls[0].request.body)
+    assert body == {"mutation_probability": 0.2}
+
+
+def test_submissions_delete(mock_api, client):
+    mock_api.add("DELETE", f"{BASE}/submissions/sub_abc", status=204)
+    # Must not raise.
+    assert client.submissions.delete("sub_abc") is None
+
+
+# --------------- Results ---------------
+
+
+def test_results_get(mock_api, client):
+    mock_api.add(
+        "GET",
+        f"{BASE}/results/res_1",
+        json={
+            "id": "res_1",
+            "submission_id": "sub_abc",
+            "best_fitness": -0.0123,
+            "best_solution": [1, 2, 3],
+            "num_generations_ran": 100,
+        },
+    )
+    r = client.results.get("res_1")
+    assert r.best_fitness == pytest.approx(-0.0123)
+    assert r.best_solution == [1, 2, 3]
+    assert r.num_generations_ran == 100
+
+
+def test_results_continue_run(mock_api, client):
+    mock_api.add(
+        "POST",
+        f"{BASE}/results/res_1/continue",
+        json={"id": "sub_child", "status": "queued"},
+        status=202,
+    )
+    child = client.results.continue_run("res_1", sol_per_pop=200)
+    assert child.id == "sub_child"
+    body = json.loads(mock_api.calls[0].request.body)
+    assert body == {"sol_per_pop": 200}
+
+
+def test_wait_for_returns_result_when_submission_succeeds(mock_api, client, monkeypatch):
+    monkeypatch.setattr("vilvik.client.time.sleep", lambda *_a, **_k: None)
+    # First poll: still running. Second poll: succeeded. Then list returns one row.
+    mock_api.add(
+        "GET",
+        f"{BASE}/submissions/sub_abc",
+        json={"id": "sub_abc", "status": "running"},
+    )
+    mock_api.add(
+        "GET",
+        f"{BASE}/submissions/sub_abc",
+        json={"id": "sub_abc", "status": "succeeded"},
+    )
+    mock_api.add(
+        "GET",
+        f"{BASE}/results",
+        json={
+            "data": [
+                {"id": "res_1", "submission_id": "sub_abc", "best_fitness": 7.0},
+            ],
+            "next_cursor": None,
+        },
+    )
+    r = client.results.wait_for("sub_abc", timeout=5, poll_interval=0)
+    assert r.best_fitness == 7.0
+
+
+def test_wait_for_raises_on_failed_submission(mock_api, client, monkeypatch):
+    monkeypatch.setattr("vilvik.client.time.sleep", lambda *_a, **_k: None)
+    mock_api.add(
+        "GET",
+        f"{BASE}/submissions/sub_bad",
+        json={"id": "sub_bad", "status": "failed"},
+    )
+    with pytest.raises(vilvik.APIError) as info:
+        client.results.wait_for("sub_bad", timeout=5, poll_interval=0)
+    assert info.value.code == "submission_failed"
+
+
+def test_wait_for_times_out(mock_api, client, monkeypatch):
+    # Two stubbed responses, both "running" — the deadline will trigger first.
+    monkeypatch.setattr("vilvik.client.time.sleep", lambda *_a, **_k: None)
+    # responses replays the last match if exhausted; we set monotonic to
+    # walk past the deadline on the second call.
+    times = iter([0.0, 0.0, 999.0])
+    monkeypatch.setattr("vilvik.client.time.monotonic", lambda: next(times))
+    mock_api.add(
+        "GET",
+        f"{BASE}/submissions/sub_x",
+        json={"id": "sub_x", "status": "running"},
+    )
+    with pytest.raises(vilvik.TimeoutError):
+        client.results.wait_for("sub_x", timeout=1, poll_interval=0)
+
+
+# --------------- Code uploads & webhooks ---------------
+
+
+def test_code_upload_create(mock_api, client):
+    mock_api.add(
+        "POST",
+        f"{BASE}/code-uploads",
+        json={"id": "code_1", "field": "fitness_func", "size_bytes": 42},
+        status=201,
+    )
+    blob = client.code_uploads.create(
+        field="fitness_func",
+        code="def fitness_func(g, s, i): return 0",
+    )
+    assert blob.id == "code_1"
+    assert blob.field_name == "fitness_func"
+
+
+def test_webhooks_list(mock_api, client):
+    mock_api.add(
+        "GET",
+        f"{BASE}/webhooks",
+        json={
+            "data": [
+                {"id": "wh_1", "url": "https://example.test/hook",
+                 "event_types": ["submission.completed"]},
+            ],
+        },
+    )
+    hooks = client.webhooks.list()
+    assert hooks[0].id == "wh_1"
+    assert "submission.completed" in hooks[0].event_types
+
+
+# --------------- Error translation ---------------
+
+
+def test_authentication_error_translation(mock_api, client):
+    mock_api.add(
+        "GET",
+        f"{BASE}/submissions/sub_abc",
+        json={"error": {"code": "invalid_key", "message": "bad key",
+                        "request_id": "req_z"}},
+        status=401,
+    )
+    with pytest.raises(vilvik.AuthenticationError) as info:
+        client.submissions.get("sub_abc")
+    assert info.value.code == "invalid_key"
+    assert info.value.request_id == "req_z"
+    assert info.value.status_code == 401
+
+
+def test_rate_limit_error_picks_up_retry_after(mock_api, client):
+    mock_api.add(
+        "GET",
+        f"{BASE}/submissions",
+        json={"error": {"code": "rate_limited", "message": "slow down"}},
+        status=429,
+        headers={"Retry-After": "7"},
+    )
+    with pytest.raises(vilvik.RateLimitError) as info:
+        client.submissions.list()
+    assert info.value.retry_after == 7
+
+
+def test_not_found_error(mock_api, client):
+    mock_api.add(
+        "GET",
+        f"{BASE}/submissions/ghost",
+        json={"error": {"code": "not_found", "message": "missing"}},
+        status=404,
+    )
+    with pytest.raises(vilvik.NotFoundError):
+        client.submissions.get("ghost")
+
+
+def test_validation_error(mock_api, client):
+    mock_api.add(
+        "POST",
+        f"{BASE}/submissions",
+        json={"error": {"code": "validation_failed",
+                        "message": "num_genes is required"}},
+        status=400,
+    )
+    with pytest.raises(vilvik.ValidationError):
+        client.submissions.create(num_generations=10)
+
+
+def test_generic_api_error_for_5xx(mock_api, client):
+    mock_api.add(
+        "GET",
+        f"{BASE}/submissions/sub_abc",
+        json={"error": {"code": "upstream", "message": "boom"}},
+        status=502,
+    )
+    with pytest.raises(vilvik.APIError) as info:
+        client.submissions.get("sub_abc")
+    assert info.value.status_code == 502
+    # Not auth/notfound/validation/ratelimit.
+    assert not isinstance(info.value, vilvik.AuthenticationError)
+    assert not isinstance(info.value, vilvik.NotFoundError)
+    assert not isinstance(info.value, vilvik.ValidationError)
+    assert not isinstance(info.value, vilvik.RateLimitError)
+
+
+# --------------- run() context manager ---------------
+
+
+def test_run_context_manager_yields_result(mock_api, monkeypatch):
+    monkeypatch.setattr("vilvik.client.time.sleep", lambda *_a, **_k: None)
+    monkeypatch.setenv("VILVIK_API_KEY", "vlk_test_env")
+    mock_api.add(
+        "POST",
+        f"{BASE}/submissions",
+        json={"id": "sub_quick", "status": "queued"},
+        status=202,
+    )
+    mock_api.add(
+        "GET",
+        f"{BASE}/submissions/sub_quick",
+        json={"id": "sub_quick", "status": "succeeded"},
+    )
+    mock_api.add(
+        "GET",
+        f"{BASE}/results",
+        json={
+            "data": [{"id": "res_q", "submission_id": "sub_quick",
+                      "best_fitness": 1.5}],
+            "next_cursor": None,
+        },
+    )
+    # The submission lookup at __exit__ time finds a terminal run, so no
+    # DELETE is issued — `assert_all_requests_are_fired=False` keeps the
+    # mock from complaining about unused matchers.
+    mock_api.add(
+        "GET",
+        f"{BASE}/submissions/sub_quick",
+        json={"id": "sub_quick", "status": "succeeded"},
+    )
+
+    with vilvik.run(
+        base_url=BASE,
+        fitness_func="x",
+        num_genes=2,
+        poll_interval=0,
+        timeout=5,
+    ) as result:
+        assert result.id == "res_q"
+        assert result.best_fitness == 1.5

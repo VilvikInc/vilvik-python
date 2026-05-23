@@ -1,0 +1,122 @@
+# vilvik
+
+Official Python SDK for [Vilvik](https://vilvik.com), a cloud platform that
+runs Genetic Algorithm (PyGAD) workloads with a REST API, scoped keys, and
+webhook delivery.
+
+```bash
+pip install vilvik
+```
+
+## Quick start
+
+```python
+import vilvik
+
+client = vilvik.Client(api_key="vlk_live_…")
+
+submission = client.submissions.create(
+    fitness_func="""
+def fitness_func(ga_instance, solution, idx):
+    return -sum(s * s for s in solution)
+""",
+    num_genes=5,
+    num_generations=100,
+    sol_per_pop=50,
+    name="quadratic-minimisation",
+)
+
+print(submission.id, submission.status)        # "abc123…", "queued"
+
+result = client.results.wait_for(submission.id, timeout=300)
+print(result.best_fitness, result.best_solution)
+```
+
+## The `run()` one-liner
+
+For scripts and notebook cells, `vilvik.run(...)` packages create-and-wait
+into a context manager that also cancels the run if you exit the block
+early:
+
+```python
+import vilvik
+
+fn = """
+def fitness_func(ga_instance, solution, idx):
+    return -sum(s * s for s in solution)
+"""
+
+with vilvik.run(fitness_func=fn, num_genes=5, num_generations=50) as result:
+    print(result.best_fitness)
+```
+
+The API key is read from `VILVIK_API_KEY` if you do not pass it
+explicitly.
+
+## Listing and pagination
+
+The list endpoints return a `Page` whose items are typed dataclasses; for
+walking everything use `iter_all`:
+
+```python
+page = client.submissions.list(limit=25)
+for sub in page:
+    print(sub.id, sub.status, sub.name)
+
+# All submissions, transparently following the cursor:
+for sub in client.submissions.iter_all():
+    ...
+```
+
+## Branching a finished run
+
+`Results.continue_run` branches a fresh run from a finished result. Each
+call creates a child submission whose `parent_submission` is the result
+you forked from. Pass any GA parameter you want to override:
+
+```python
+parent = client.results.get(result_id)
+variant_a = client.results.continue_run(parent.id, mutation_probability=0.10)
+variant_b = client.results.continue_run(parent.id, sol_per_pop=100)
+```
+
+The Vilvik dashboard renders the resulting lineage as an interactive tree
+on the result page.
+
+## Errors
+
+Every SDK error inherits from `vilvik.VilvikError`. Subclasses let you
+catch specific failure modes:
+
+```python
+try:
+    client.submissions.get("does-not-exist")
+except vilvik.NotFoundError as e:
+    print("Not found:", e.request_id)
+except vilvik.RateLimitError as e:
+    print("Slow down, retry after", e.retry_after, "seconds")
+except vilvik.AuthenticationError:
+    print("Check your API key and scopes")
+except vilvik.VilvikError:
+    print("Something else went wrong")
+```
+
+## Configuration
+
+| Argument        | Default                            | Notes                                              |
+| --------------- | ---------------------------------- | -------------------------------------------------- |
+| `api_key`       | `os.environ["VILVIK_API_KEY"]`     | Required. Bearer token created in the dashboard.   |
+| `base_url`      | `https://vilvik.com/api/v1`        | Override for staging or self-hosted instances.     |
+| `timeout`       | `60.0` seconds                     | Per-HTTP-request timeout.                          |
+| `max_retries`   | `2`                                | Idempotent (GET / HEAD) retries on network errors. |
+
+## Development
+
+```bash
+pip install -e ".[dev]"
+pytest
+```
+
+## License
+
+MIT.
