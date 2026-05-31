@@ -86,6 +86,46 @@ def test_submissions_create_forwards_extra_ga_params(mock_api, client):
     assert body["parent_selection_type"] == "tournament"
 
 
+def test_submissions_create_auto_detects_entry_symbol(mock_api, client):
+    """The entry symbol is detected from the source and sent, so callers
+    don't have to repeat the function name. The runtime requires it."""
+    mock_api.add("POST", f"{BASE}/submissions",
+                 json={"id": "sub_e", "status": "queued"}, status=202)
+    client.submissions.create(
+        fitness_func="def my_fitness(g, s, i):\n    return sum(s)\n",
+        num_genes=3,
+    )
+    body = json.loads(mock_api.calls[0].request.body)
+    assert body["fitness_func_entry"] == "my_fitness"
+
+
+def test_submissions_create_honors_explicit_entry_symbol(mock_api, client):
+    """An explicit <role>_entry is never overridden by detection."""
+    mock_api.add("POST", f"{BASE}/submissions",
+                 json={"id": "sub_e2", "status": "queued"}, status=202)
+    client.submissions.create(
+        fitness_func="def a(g, s, i): return 0\ndef b(g, s, i): return 1\n",
+        fitness_func_entry="a",
+        num_genes=3,
+    )
+    body = json.loads(mock_api.calls[0].request.body)
+    assert body["fitness_func_entry"] == "a"
+
+
+def test_submissions_create_detects_entry_for_callbacks(mock_api, client):
+    """Callback code fields passed as source also get their entry symbol."""
+    mock_api.add("POST", f"{BASE}/submissions",
+                 json={"id": "sub_e3", "status": "queued"}, status=202)
+    client.submissions.create(
+        fitness_func="def fitness_func(g, s, i): return 0",
+        on_generation="def log_gen(ga):\n    pass\n",
+        num_genes=3,
+    )
+    body = json.loads(mock_api.calls[0].request.body)
+    assert body["fitness_func_entry"] == "fitness_func"
+    assert body["on_generation_entry"] == "log_gen"
+
+
 def test_submissions_get(mock_api, client):
     mock_api.add(
         "GET",

@@ -12,6 +12,7 @@ import os
 import time
 from typing import Any, Dict, Iterable, Iterator, List, Optional
 
+from vilvik._capture import CODE_ROLES, _detect_entry_from_source
 from vilvik._http import DEFAULT_BASE_URL, DEFAULT_TIMEOUT_SECONDS, Transport
 from vilvik.exceptions import TimeoutError as VilvikTimeout
 from vilvik.models import CodeUpload, ImportRecord, Page, Result, Submission, Webhook
@@ -66,6 +67,24 @@ class Submissions(_Resource):
         if notification_email is not None:
             body["notification_email"] = notification_email
         body.update({k: v for k, v in ga_params.items() if v is not None})
+
+        # Fill in the entry symbol for each code field, the way the website's
+        # new-submission form does. The runtime requires the top-level name to
+        # call and no longer guesses, so a code field sent without its
+        # `<role>_entry` is rejected by the server. Detect it from the source
+        # (the last top-level def/class), but never override an entry the
+        # caller passed explicitly. If detection fails we leave it unset and
+        # let the server return its clear "entry symbol is required" error.
+        for role in CODE_ROLES:
+            source = body.get(role)
+            if not isinstance(source, str) or not source.strip():
+                continue
+            entry_key = f"{role}_entry"
+            if body.get(entry_key):
+                continue
+            detected = _detect_entry_from_source(source)
+            if detected:
+                body[entry_key] = detected
 
         payload = self._t.request(
             "POST",
