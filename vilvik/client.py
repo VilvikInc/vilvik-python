@@ -255,11 +255,17 @@ class Results(_Resource):
 class CodeUploads(_Resource):
     """Endpoints under `/api/v1/code-uploads`."""
 
-    def create(self, *, field: str, code: str) -> CodeUpload:
+    def create(self, *, content: str) -> CodeUpload:
+        """Upload a code blob and get back a `code_id` to reference.
+
+        The upload is role-agnostic. Reference it from a submission via the
+        matching `<role>_id` parameter, e.g. passing the returned
+        `code_id` as `fitness_func_id=...` to `submissions.create`.
+        """
         payload = self._t.request(
             "POST",
             "/code-uploads",
-            json_body={"field": field, "code": code},
+            json_body={"content": content},
         )
         return CodeUpload.from_api(payload)
 

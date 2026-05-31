@@ -313,15 +313,30 @@ def test_code_upload_create(mock_api, client):
     mock_api.add(
         "POST",
         f"{BASE}/code-uploads",
-        json={"id": "code_1", "field": "fitness_func", "size_bytes": 42},
+        json={"code_id": "code_1", "content_size": 42, "is_expired": False},
         status=201,
     )
     blob = client.code_uploads.create(
-        field="fitness_func",
-        code="def fitness_func(g, s, i): return 0",
+        content="def fitness_func(g, s, i): return 0",
     )
-    assert blob.id == "code_1"
-    assert blob.field_name == "fitness_func"
+    assert blob.code_id == "code_1"
+    assert blob.content_size == 42
+    # The request sends the source under `content`, matching the REST API.
+    body = json.loads(mock_api.calls[0].request.body)
+    assert body == {"content": "def fitness_func(g, s, i): return 0"}
+
+
+def test_code_upload_referenced_in_submission(mock_api, client):
+    """An uploaded blob is referenced by `<role>_id`, using its code_id."""
+    mock_api.add("POST", f"{BASE}/submissions",
+                 json={"id": "sub_ref", "status": "queued"}, status=202)
+    client.submissions.create(
+        fitness_func_id="code_1",
+        fitness_func_entry="fitness_func",
+        num_genes=3,
+    )
+    body = json.loads(mock_api.calls[0].request.body)
+    assert body["fitness_func_id"] == "code_1"
 
 
 def test_webhooks_list(mock_api, client):

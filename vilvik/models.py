@@ -99,23 +99,30 @@ class Result:
 class CodeUpload:
     """A reusable code blob that submissions can reference by id.
 
-    The model attribute is named `field_name` rather than `field` to
-    avoid shadowing `dataclasses.field` inside the class body.
+    Uploads are role-agnostic: the server stores the source and returns a
+    `code_id`. You choose which role it fills when you reference it from a
+    submission, e.g. `fitness_func_id=upload.code_id`.
     """
 
-    id: str
-    field_name: str = ""
-    size_bytes: Optional[int] = None
+    code_id: str
+    content: Optional[str] = None
+    content_size: Optional[int] = None
+    content_sha256: Optional[str] = None
     created_at: Optional[datetime] = None
+    expires_at: Optional[datetime] = None
+    is_expired: Optional[bool] = None
     raw: Dict[str, Any] = field(default_factory=dict)
 
     @classmethod
     def from_api(cls, data: Dict[str, Any]) -> "CodeUpload":
         return cls(
-            id=str(data.get("id", "")),
-            field_name=str(data.get("field", "") or ""),
-            size_bytes=data.get("size_bytes"),
+            code_id=str(data.get("code_id", "")),
+            content=data.get("content"),
+            content_size=data.get("content_size"),
+            content_sha256=data.get("content_sha256"),
             created_at=_parse_dt(data.get("created_at")),
+            expires_at=_parse_dt(data.get("expires_at")),
+            is_expired=data.get("is_expired"),
             raw=dict(data),
         )
 
