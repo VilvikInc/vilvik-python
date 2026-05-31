@@ -4,7 +4,7 @@ All notable changes to the `vilvik` Python SDK are recorded here. The format
 follows [Keep a Changelog](https://keepachangelog.com/), and the project uses
 [semantic versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.3.0]
 
 ### Added
 
