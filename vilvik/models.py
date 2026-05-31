@@ -70,6 +70,8 @@ class Result:
 
     id: str
     submission_id: str
+    name: Optional[str] = None
+    is_shared: Optional[bool] = None
     best_fitness: Optional[float] = None
     best_solution: Optional[List[Any]] = None
     num_generations_ran: Optional[int] = None
@@ -82,6 +84,8 @@ class Result:
         return cls(
             id=str(data.get("id", "")),
             submission_id=str(data.get("submission_id", "")),
+            name=data.get("name"),
+            is_shared=data.get("is_shared"),
             best_fitness=data.get("best_fitness"),
             best_solution=data.get("best_solution"),
             num_generations_ran=data.get("num_generations_ran"),

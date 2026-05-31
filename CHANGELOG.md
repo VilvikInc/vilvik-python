@@ -4,6 +4,15 @@ All notable changes to the `vilvik` Python SDK are recorded here. The format
 follows [Keep a Changelog](https://keepachangelog.com/), and the project uses
 [semantic versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- `client.results.delete(result_id)` wraps `DELETE /api/v1/results/{id}`.
+- `client.results.update(result_id, name=..., is_shared=...)` wraps
+  `PATCH /api/v1/results/{id}`; only the fields you pass are sent.
+- `Result` now exposes `name` and `is_shared`.
+
 ## [0.2.2]
 
 ### Changed

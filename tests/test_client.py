@@ -173,6 +173,44 @@ def test_results_continue_run(mock_api, client):
     assert body == {"sol_per_pop": 200}
 
 
+def test_results_delete(mock_api, client):
+    mock_api.add("DELETE", f"{BASE}/results/res_1", status=204)
+    # Must not raise and returns None on 204.
+    assert client.results.delete("res_1") is None
+
+
+def test_results_update_sends_patch_and_returns_result(mock_api, client):
+    mock_api.add(
+        "PATCH",
+        f"{BASE}/results/res_1",
+        json={
+            "id": "res_1",
+            "submission_id": "sub_abc",
+            "name": "renamed result",
+            "is_shared": True,
+        },
+    )
+    r = client.results.update("res_1", name="renamed result", is_shared=True)
+    assert mock_api.calls[0].request.method == "PATCH"
+    body = json.loads(mock_api.calls[0].request.body)
+    assert body == {"name": "renamed result", "is_shared": True}
+    assert r.name == "renamed result"
+    assert r.is_shared is True
+
+
+def test_results_update_sends_only_provided_fields(mock_api, client):
+    """Partial update: passing only is_shared=False must send just that key
+    (False is a real value, not 'unset')."""
+    mock_api.add(
+        "PATCH",
+        f"{BASE}/results/res_1",
+        json={"id": "res_1", "submission_id": "sub_abc", "is_shared": False},
+    )
+    client.results.update("res_1", is_shared=False)
+    body = json.loads(mock_api.calls[0].request.body)
+    assert body == {"is_shared": False}
+
+
 def test_wait_for_returns_result_when_submission_succeeds(mock_api, client, monkeypatch):
     monkeypatch.setattr("vilvik.client.time.sleep", lambda *_a, **_k: None)
     # First poll: still running. Second poll: succeeded. Then list returns one row.

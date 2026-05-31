@@ -141,6 +141,30 @@ class Results(_Resource):
         items = [Result.from_api(row) for row in payload.get("data", [])]
         return Page(items=items, next_cursor=payload.get("next_cursor"), raw=payload)
 
+    def update(
+        self,
+        result_id: str,
+        *,
+        name: Optional[str] = None,
+        is_shared: Optional[bool] = None,
+    ) -> Result:
+        """PATCH /results/{id} — rename a result or change its shared flag.
+
+        Only the fields you pass are sent, so `is_shared=False` updates just
+        that flag. Returns the updated result.
+        """
+        body: Dict[str, Any] = {}
+        if name is not None:
+            body["name"] = name
+        if is_shared is not None:
+            body["is_shared"] = is_shared
+        payload = self._t.request("PATCH", f"/results/{result_id}", json_body=body)
+        return Result.from_api(payload)
+
+    def delete(self, result_id: str) -> None:
+        """DELETE /results/{id} — remove a result. The submission is untouched."""
+        self._t.request("DELETE", f"/results/{result_id}")
+
     def continue_run(
         self,
         result_id: str,
