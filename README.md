@@ -102,6 +102,22 @@ submission = client.submissions.create(
 print(submission.generated)   # {"integers": [...]}
 ```
 
+The machine learning types tune model hyperparameters with a genetic
+algorithm. Over the API they run on a built-in dataset only (`dataset_name`
+is `iris`, `breast_cancer`, or `random`); training on your own uploaded
+data is available on the website but not yet over the API or SDK:
+
+```python
+submission = client.submissions.create(
+    submission_type="quick_sklearn_rfc_hyperparameters",
+    dataset_name="iris",
+    hyperparameters={
+        "n_estimators": {"tune": True, "min": 50, "max": 150},
+        "max_depth": {"fixed": 10},
+    },
+)
+```
+
 ## Listing and pagination
 
 The list endpoints return a `Page` whose items are typed dataclasses; for
