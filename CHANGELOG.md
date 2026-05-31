@@ -4,6 +4,28 @@ All notable changes to the `vilvik` Python SDK are recorded here. The format
 follows [Keep a Changelog](https://keepachangelog.com/), and the project uses
 [semantic versioning](https://semver.org/).
 
+## [0.4.0]
+
+### Fixed
+
+- `submissions.create` now sends an entry symbol for every code field. The
+  runtime requires the top-level name to call and no longer guesses, so a
+  submission that omitted it was accepted and then failed during execution
+  with "Entry symbol is required". The entry is auto-detected from the
+  source (the last top-level def or class), and an explicit `<role>_entry`
+  still overrides the detection.
+- `code_uploads.create` now matches the REST API: it takes `content=` and
+  sends `{"content": ...}` (previously `field=`/`code=`, which the server
+  rejected). `CodeUpload` now exposes `code_id`, `content`, `content_size`,
+  `content_sha256`, `created_at`, `expires_at`, and `is_expired`. Reference
+  an upload from a submission with `<role>_id=upload.code_id` (for example
+  `fitness_func_id=upload.code_id`).
+
+### Known limitations
+
+- `code_uploads.list()` calls an endpoint the REST API does not expose yet;
+  use `code_uploads.get(code_id)` to fetch a single upload.
+
 ## [0.3.0]
 
 ### Added
