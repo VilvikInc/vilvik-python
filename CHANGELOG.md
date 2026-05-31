@@ -4,6 +4,30 @@ All notable changes to the `vilvik` Python SDK are recorded here. The format
 follows [Keep a Changelog](https://keepachangelog.com/), and the project uses
 [semantic versioning](https://semver.org/).
 
+## [0.5.0]
+
+### Added
+
+- Quick submissions. Set `submission_type` to a built-in problem type and pass
+  that problem's inputs as keyword arguments; the SDK forwards them as-is, so
+  you do not write a `fitness_func`. Covers subset sum, the linear objectives,
+  knapsack, bin packing, 2D clustering, both travelling salesman variants, and
+  the machine learning hyperparameter and training types (the ML types run on a
+  built-in dataset; training on your own uploaded data is website-only for now).
+  See the README and the docs at https://vilvik.com/docs/api/quick-submissions/.
+- `Submission.generated` exposes any data the service generated for a quick
+  submission (for example the integers it picked when you pass `num_integers`
+  instead of an explicit `integers` list), so a run is reproducible from the
+  response.
+
+### Changed
+
+- `num_generations` and `sol_per_pop` are now optional in `submissions.create`.
+  When you omit them the server applies the submission type's own defaults
+  instead of the SDK always sending 100 and 50. Pass them explicitly to set
+  them. A `new` submission that relied on the implicit 100 / 50 should now pass
+  those values directly.
+
 ## [0.4.0]
 
 ### Fixed
