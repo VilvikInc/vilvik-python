@@ -83,7 +83,7 @@ submission = client.submissions.create(
     submission_type="quick_knapsack",
     item_names=["map", "compass", "water", "rope"],
     item_values=[5, 8, 3, 4],
-    item_weights=[2, 1, 3, 2],
+    item_weights=[[2], [1], [3], [2]],
     dimension_names=["weight"],
     dimension_capacities=[5],
 )
