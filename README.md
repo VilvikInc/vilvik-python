@@ -59,6 +59,49 @@ with vilvik.run(fitness_func=fn, num_genes=5, num_generations=50) as result:
 The API key is read from `VILVIK_API_KEY` if you do not pass it
 explicitly.
 
+## Quick submissions
+
+Quick submission types let you run a built-in problem without writing a
+fitness function. Set `submission_type` and pass that problem's inputs.
+You can leave `num_generations` and `sol_per_pop` unset, and the quick
+type applies its own defaults:
+
+```python
+import vilvik
+
+client = vilvik.Client(api_key="vlk_live_…")
+
+# Find a subset of the integers that sums to the target.
+submission = client.submissions.create(
+    submission_type="quick_binary_subset_sum",
+    integers=[3, 7, 1, 9, 4, 2, 8, 5],
+    target=20,
+)
+
+# A 0/1 knapsack with explicit items and a single capacity dimension.
+submission = client.submissions.create(
+    submission_type="quick_knapsack",
+    item_names=["map", "compass", "water", "rope"],
+    item_values=[5, 8, 3, 4],
+    item_weights=[2, 1, 3, 2],
+    dimension_names=["weight"],
+    dimension_capacities=[5],
+)
+```
+
+When you ask the service to generate the inputs for you (for example
+passing `num_integers` instead of an explicit `integers` list), the
+response echoes what it picked under `submission.generated`:
+
+```python
+submission = client.submissions.create(
+    submission_type="quick_binary_subset_sum",
+    num_integers=8,
+    target=20,
+)
+print(submission.generated)   # {"integers": [...]}
+```
+
 ## Listing and pagination
 
 The list endpoints return a `Page` whose items are typed dataclasses; for

@@ -37,6 +37,7 @@ class Submission:
     submission_type: Optional[str] = None
     created_at: Optional[datetime] = None
     request_id: Optional[str] = None
+    generated: Dict[str, Any] = field(default_factory=dict)
     raw: Dict[str, Any] = field(default_factory=dict)
 
     @property
@@ -60,6 +61,7 @@ class Submission:
             submission_type=data.get("submission_type"),
             created_at=_parse_dt(data.get("created_at")),
             request_id=data.get("request_id"),
+            generated=data.get("generated") or {},
             raw=dict(data),
         )
 

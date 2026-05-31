@@ -33,8 +33,8 @@ class Submissions(_Resource):
         *,
         fitness_func: Optional[str] = None,
         num_genes: Optional[int] = None,
-        num_generations: int = 100,
-        sol_per_pop: int = 50,
+        num_generations: Optional[int] = None,
+        sol_per_pop: Optional[int] = None,
         name: Optional[str] = None,
         description: Optional[str] = None,
         submission_type: str = "new",
@@ -48,12 +48,16 @@ class Submissions(_Resource):
         Extra `ga_params` are forwarded as-is so callers can pass any of
         the PyGAD knobs (`mutation_probability`, `parent_selection_type`,
         `gene_space`, …) without the SDK having to enumerate them.
+
+        `num_generations` and `sol_per_pop` are optional: leave them unset
+        to let a quick submission type apply its own server-side defaults.
+        Any value you pass is forwarded as-is.
         """
-        body: Dict[str, Any] = {
-            "num_generations": num_generations,
-            "sol_per_pop": sol_per_pop,
-            "submission_type": submission_type,
-        }
+        body: Dict[str, Any] = {"submission_type": submission_type}
+        if num_generations is not None:
+            body["num_generations"] = num_generations
+        if sol_per_pop is not None:
+            body["sol_per_pop"] = sol_per_pop
         if fitness_func is not None:
             body["fitness_func"] = fitness_func
         if num_genes is not None:

@@ -9,6 +9,7 @@ import pytest
 
 import vilvik
 from vilvik.client import Client
+from vilvik.models import Submission
 
 BASE = "https://example.test/api/v1"
 
@@ -86,6 +87,48 @@ def test_submissions_create_forwards_extra_ga_params(mock_api, client):
     assert body["parent_selection_type"] == "tournament"
 
 
+def test_submissions_create_quick_type_omits_unset_ga_defaults(mock_api, client):
+    """A quick submission type's own inputs are forwarded, and num_generations
+    / sol_per_pop are NOT sent when the caller leaves them unset — so the
+    service applies the quick type's own defaults."""
+    mock_api.add(
+        "POST",
+        f"{BASE}/submissions",
+        json={"id": "sub_q", "status": "queued"},
+        status=202,
+    )
+    client.submissions.create(
+        submission_type="quick_binary_subset_sum",
+        integers=[3, 7, 1, 9],
+        target=20,
+    )
+    body = json.loads(mock_api.calls[0].request.body)
+    assert body["submission_type"] == "quick_binary_subset_sum"
+    assert body["integers"] == [3, 7, 1, 9]
+    assert body["target"] == 20
+    assert "num_generations" not in body
+    assert "sol_per_pop" not in body
+
+
+def test_submissions_create_forwards_explicit_ga_defaults(mock_api, client):
+    """Explicit num_generations / sol_per_pop are still forwarded as-is."""
+    mock_api.add(
+        "POST",
+        f"{BASE}/submissions",
+        json={"id": "sub_d", "status": "queued"},
+        status=202,
+    )
+    client.submissions.create(
+        fitness_func="def fitness_func(g, s, i): return 0",
+        num_genes=4,
+        num_generations=10,
+        sol_per_pop=8,
+    )
+    body = json.loads(mock_api.calls[0].request.body)
+    assert body["num_generations"] == 10
+    assert body["sol_per_pop"] == 8
+
+
 def test_submissions_create_auto_detects_entry_symbol(mock_api, client):
     """The entry symbol is detected from the source and sent, so callers
     don't have to repeat the function name. The runtime requires it."""
@@ -124,6 +167,21 @@ def test_submissions_create_detects_entry_for_callbacks(mock_api, client):
     body = json.loads(mock_api.calls[0].request.body)
     assert body["fitness_func_entry"] == "fitness_func"
     assert body["on_generation_entry"] == "log_gen"
+
+
+def test_submission_from_api_exposes_generated():
+    """A quick submission's 202 response echoes any data the service
+    generated under `generated`; it is surfaced on the model."""
+    sub = Submission.from_api(
+        {"id": "sub_g", "status": "queued", "generated": {"integers": [1, 2, 3]}}
+    )
+    assert sub.generated == {"integers": [1, 2, 3]}
+
+
+def test_submission_from_api_generated_defaults_to_empty():
+    """A response without `generated` yields an empty dict, not None."""
+    sub = Submission.from_api({"id": "sub_n", "status": "queued"})
+    assert sub.generated == {}
 
 
 def test_submissions_get(mock_api, client):
