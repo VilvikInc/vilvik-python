@@ -200,19 +200,19 @@ def test_submissions_list_and_iter_all(mock_api, client):
         "GET",
         f"{BASE}/submissions",
         json={
-            "data": [
+            "results": [
                 {"id": "a", "status": "queued"},
                 {"id": "b", "status": "running"},
             ],
-            "next_cursor": "cur_2",
+            "next": f"{BASE}/submissions?cursor=cur_2&limit=25",
         },
     )
     mock_api.add(
         "GET",
         f"{BASE}/submissions",
         json={
-            "data": [{"id": "c", "status": "succeeded"}],
-            "next_cursor": None,
+            "results": [{"id": "c", "status": "succeeded"}],
+            "next": None,
         },
     )
     ids = [s.id for s in client.submissions.iter_all()]
@@ -247,9 +247,9 @@ def test_results_get(mock_api, client):
         json={
             "id": "res_1",
             "submission_id": "sub_abc",
-            "best_fitness": -0.0123,
+            "best_solution_fitness": "-0.0123",
             "best_solution": [1, 2, 3],
-            "num_generations_ran": 100,
+            "generations_completed": 100,
         },
     )
     r = client.results.get("res_1")
@@ -326,10 +326,10 @@ def test_wait_for_returns_result_when_submission_succeeds(mock_api, client, monk
         "GET",
         f"{BASE}/results",
         json={
-            "data": [
-                {"id": "res_1", "submission_id": "sub_abc", "best_fitness": 7.0},
+            "results": [
+                {"id": "res_1", "submission_id": "sub_abc", "best_solution_fitness": "7.0"},
             ],
-            "next_cursor": None,
+            "next": None,
         },
     )
     r = client.results.wait_for("sub_abc", timeout=5, poll_interval=0)
@@ -402,7 +402,7 @@ def test_webhooks_list(mock_api, client):
         "GET",
         f"{BASE}/webhooks",
         json={
-            "data": [
+            "results": [
                 {"id": "wh_1", "url": "https://example.test/hook",
                  "event_types": ["submission.completed"]},
             ],
@@ -505,9 +505,9 @@ def test_run_context_manager_yields_result(mock_api, monkeypatch):
         "GET",
         f"{BASE}/results",
         json={
-            "data": [{"id": "res_q", "submission_id": "sub_quick",
-                      "best_fitness": 1.5}],
-            "next_cursor": None,
+            "results": [{"id": "res_q", "submission_id": "sub_quick",
+                      "best_solution_fitness": "1.5"}],
+            "next": None,
         },
     )
     # The submission lookup at __exit__ time finds a terminal run, so no

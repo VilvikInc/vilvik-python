@@ -4,6 +4,22 @@ All notable changes to the `vilvik` Python SDK are recorded here. The format
 follows [Keep a Changelog](https://keepachangelog.com/), and the project uses
 [semantic versioning](https://semver.org/).
 
+## [0.5.1]
+
+### Fixed
+
+- Listing endpoints (`submissions.list`, `results.list`, `code_uploads.list`,
+  `webhooks.list`) returned no items. The SDK read the page items from a `data`
+  key and the cursor from `next_cursor`, but the API returns items under
+  `results` and the next page as a full URL in `next`. The SDK now reads the
+  correct keys and pulls the cursor out of the `next` URL, so listing and
+  `iter_all` work and `results.wait_for` finds the finished result.
+- `Result` fields came back empty. The API names the fitness
+  `best_solution_fitness` (a string) and the generation count
+  `generations_completed`; the SDK now maps those onto `best_fitness` (parsed
+  to a number, or a list for multi-objective runs) and `num_generations_ran`,
+  and reads the `best_solution` vector the API now returns on result detail.
+
 ## [0.5.0]
 
 ### Added

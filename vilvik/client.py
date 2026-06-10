@@ -18,6 +18,25 @@ from vilvik.exceptions import TimeoutError as VilvikTimeout
 from vilvik.models import CodeUpload, ImportRecord, Page, Result, Submission, Webhook
 
 
+def _cursor_from_next(next_url: Optional[str]) -> Optional[str]:
+    """Pull the `cursor` value out of a paginated `next` page URL.
+
+    The API uses cursor pagination and returns the next page as a full URL
+    in the `next` field (e.g. `.../results?cursor=abc&limit=25`). We follow
+    it by reusing the cursor token, so extract just that query value here.
+    Returns None when there is no next page.
+    """
+    if not next_url:
+        return None
+    from urllib.parse import urlparse, parse_qs
+
+    try:
+        values = parse_qs(urlparse(next_url).query).get("cursor")
+        return values[0] if values else None
+    except Exception:
+        return None
+
+
 class _Resource:
     """Base for resource sub-clients — holds a reference to the transport."""
 
@@ -107,8 +126,8 @@ class Submissions(_Resource):
         if cursor:
             params["cursor"] = cursor
         payload = self._t.request("GET", "/submissions", params=params)
-        items = [Submission.from_api(row) for row in payload.get("data", [])]
-        return Page(items=items, next_cursor=payload.get("next_cursor"), raw=payload)
+        items = [Submission.from_api(row) for row in payload.get("results", [])]
+        return Page(items=items, next_cursor=_cursor_from_next(payload.get("next")), raw=payload)
 
     def iter_all(self, *, limit: int = 25) -> Iterator[Submission]:
         """Generator that follows `next_cursor` until exhausted."""
@@ -161,8 +180,8 @@ class Results(_Resource):
         if cursor:
             params["cursor"] = cursor
         payload = self._t.request("GET", "/results", params=params)
-        items = [Result.from_api(row) for row in payload.get("data", [])]
-        return Page(items=items, next_cursor=payload.get("next_cursor"), raw=payload)
+        items = [Result.from_api(row) for row in payload.get("results", [])]
+        return Page(items=items, next_cursor=_cursor_from_next(payload.get("next")), raw=payload)
 
     def update(
         self,
@@ -281,8 +300,8 @@ class CodeUploads(_Resource):
         if cursor:
             params["cursor"] = cursor
         payload = self._t.request("GET", "/code-uploads", params=params)
-        items = [CodeUpload.from_api(row) for row in payload.get("data", [])]
-        return Page(items=items, next_cursor=payload.get("next_cursor"), raw=payload)
+        items = [CodeUpload.from_api(row) for row in payload.get("results", [])]
+        return Page(items=items, next_cursor=_cursor_from_next(payload.get("next")), raw=payload)
 
 
 class Webhooks(_Resource):
@@ -296,7 +315,7 @@ class Webhooks(_Resource):
 
     def list(self) -> List[Webhook]:
         payload = self._t.request("GET", "/webhooks")
-        items = payload.get("data") if isinstance(payload, dict) else payload
+        items = payload.get("results") if isinstance(payload, dict) else payload
         return [Webhook.from_api(row) for row in (items or [])]
 
 

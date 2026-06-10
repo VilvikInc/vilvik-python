@@ -83,14 +83,31 @@ class Result:
 
     @classmethod
     def from_api(cls, data: Dict[str, Any]) -> "Result":
+        # The API names the fitness `best_solution_fitness` and the
+        # generation count `generations_completed`; accept the older
+        # `best_fitness` / `num_generations_ran` too for forward safety.
+        # best_solution_fitness is a string (a number, or a JSON list for
+        # multi-objective runs), so coerce it back to a number/list.
+        raw_fitness = data.get("best_solution_fitness", data.get("best_fitness"))
+        best_fitness: Any = raw_fitness
+        if isinstance(raw_fitness, str):
+            try:
+                best_fitness = float(raw_fitness)
+            except ValueError:
+                try:
+                    import json as _json
+
+                    best_fitness = _json.loads(raw_fitness)
+                except Exception:
+                    best_fitness = raw_fitness
         return cls(
             id=str(data.get("id", "")),
             submission_id=str(data.get("submission_id", "")),
             name=data.get("name"),
             is_shared=data.get("is_shared"),
-            best_fitness=data.get("best_fitness"),
+            best_fitness=best_fitness,
             best_solution=data.get("best_solution"),
-            num_generations_ran=data.get("num_generations_ran"),
+            num_generations_ran=data.get("generations_completed", data.get("num_generations_ran")),
             stopped_reason=data.get("stopped_reason"),
             created_at=_parse_dt(data.get("created_at")),
             raw=dict(data),
