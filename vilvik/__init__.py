@@ -10,6 +10,7 @@ Quick start:
         num_genes=5,
         num_generations=50,
         sol_per_pop=30,
+        num_parents_mating=4,
     )
     print(sub.id, sub.status_url)
 
@@ -20,7 +21,8 @@ Quick start:
 For one-shot scripts, the context-managed `vilvik.run(...)` helper
 combines submit + wait:
 
-    with vilvik.run(api_key="vlk_live_…", fitness_func=fn, num_genes=5) as r:
+    with vilvik.run(api_key="vlk_live_…", fitness_func=fn, num_genes=5,
+                    num_generations=50, sol_per_pop=10, num_parents_mating=4) as r:
         print(r.best_fitness)
 """
 

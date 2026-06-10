@@ -4,6 +4,16 @@ All notable changes to the `vilvik` Python SDK are recorded here. The format
 follows [Keep a Changelog](https://keepachangelog.com/), and the project uses
 [semantic versioning](https://semver.org/).
 
+## [0.5.2]
+
+### Fixed
+
+- Documentation only. The README and `vilvik.run(...)` examples called a run
+  with just `fitness_func` and `num_genes`, but a custom run also requires
+  `num_generations` and `num_parents_mating`, so copying the example verbatim
+  returned a validation error. The examples now pass the required GA
+  parameters so they run as written.
+
 ## [0.5.1]
 
 ### Fixed

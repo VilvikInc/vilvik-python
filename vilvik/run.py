@@ -3,7 +3,8 @@
 Lets a script submit a run and block until it finishes in a single
 expression — the workflow most users actually want in a Jupyter cell:
 
-    with vilvik.run(fitness_func=fn, num_genes=5) as result:
+    with vilvik.run(fitness_func=fn, num_genes=5, num_generations=50,
+                    sol_per_pop=10, num_parents_mating=4) as result:
         print(result.best_fitness)
 
 The context manager handles client construction, submission, and the

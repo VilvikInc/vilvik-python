@@ -29,6 +29,7 @@ def fitness_func(ga_instance, solution, idx):
     num_genes=5,
     num_generations=100,
     sol_per_pop=50,
+    num_parents_mating=4,
     name="quadratic-minimisation",
 )
 
@@ -52,7 +53,8 @@ def fitness_func(ga_instance, solution, idx):
     return -sum(s * s for s in solution)
 """
 
-with vilvik.run(fitness_func=fn, num_genes=5, num_generations=50) as result:
+with vilvik.run(fitness_func=fn, num_genes=5, num_generations=50,
+                sol_per_pop=10, num_parents_mating=4) as result:
     print(result.best_fitness)
 ```
 
