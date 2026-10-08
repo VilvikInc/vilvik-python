@@ -13,6 +13,10 @@ def test_load_missing_returns_none(tmp_path, monkeypatch):
 
 
 def test_saved_file_is_user_only(tmp_path, monkeypatch):
+    import os
+    if os.name == "nt":
+        import pytest
+        pytest.skip("POSIX mode bits do not represent Windows ACL permissions")
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
     _credentials.save_api_key("vlk_live_abc")
     import os, stat

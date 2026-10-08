@@ -1,0 +1,42 @@
+name: PyGAD compatibility
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: '43 8 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compatibility:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.9', '3.12']
+        pygad: [minimum, latest, development]
+    name: Python ${{ matrix.python }} / PyGAD ${{ matrix.pygad }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install SDK and test dependencies
+        run: python -m pip install -e '.[dev]'
+      - name: Install PyGAD under test
+        env:
+          PYGAD_CHANNEL: ${{ matrix.pygad }}
+        run: |
+          case "$PYGAD_CHANNEL" in
+            minimum) python -m pip install 'pygad==3.6.0' ;;
+            latest) python -m pip install --upgrade pygad ;;
+            development) python -m pip install 'git+https://github.com/ahmedfgad/GeneticAlgorithmPython.git@master' ;;
+          esac
+      - name: Verify real dependencies and run all SDK tests
+        run: |
+          python -c "import pygad, vilvik, numpy; print('PyGAD', pygad.__version__, 'SDK', vilvik.__version__)"
+          python -m pytest -q -ra
