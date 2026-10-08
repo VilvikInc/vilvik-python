@@ -4,6 +4,29 @@ All notable changes to the `vilvik` Python SDK are recorded here. The format
 follows [Keep a Changelog](https://keepachangelog.com/), and the project uses
 [semantic versioning](https://semver.org/).
 
+## [0.5.4]
+
+### Fixed
+
+- Preserve batch fitness size, mutation by replacement, solution history flags
+  and parallel execution settings when importing a local PyGAD run. Batch
+  fitness continuations now receive the required batch size.
+
+### Added
+
+- Compatibility tests with real PyGAD runs, including reconstruction and
+  continuation of exported code and parameters.
+- Released and development PyGAD versions tested in CI, and compatibility
+  tests run before publishing releases.
+
+## [0.5.3]
+
+### Fixed
+
+- Export normalized gene types, including NumPy, mixed types and precision.
+- Normalize parsed stop criteria and export the effective mutation control.
+- Preserve mixed-gene result metadata and parse webhook event names.
+
 ## [0.5.2]
 
 ### Fixed
@@ -139,12 +162,3 @@ First public release.
 [0.2.2]: https://github.com/VilvikInc/vilvik-python/releases/tag/v0.2.2
 [0.2.1]: https://github.com/VilvikInc/vilvik-python/releases/tag/v0.2.1
 [0.2.0]: https://github.com/VilvikInc/vilvik-python/releases/tag/v0.2.0
-# 0.5.4
-
-- Preserve batch fitness size, mutation by replacement, solution history flags
-  and parallel execution settings when importing a local PyGAD run. Batch
-  fitness continuations now receive the required batch size.
-- Add compatibility tests with real PyGAD runs, including reconstruction and
-  continuation of exported code and parameters.
-- Test released and development PyGAD versions in CI and run compatibility
-  tests before publishing releases.
