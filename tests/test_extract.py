@@ -57,3 +57,39 @@ def test_extract_result_basic():
 def test_extract_result_excludes_population_when_disabled():
     r = _extract.extract_result(_fake_ga(), include_population=False)
     assert "population" not in r
+
+
+def test_normalized_default_gene_type_is_json_serializable():
+    import json
+    ga = _fake_ga(); ga.gene_type = [float, None]; ga.gene_type_single = True
+    payload = _extract.extract_ga_parameters(ga)
+    assert payload["gene_type"] == "float"
+    json.dumps(payload)
+
+
+def test_normalized_gene_type_preserves_precision_and_mixed_types():
+    ga = _fake_ga(); ga.gene_type = [float, 2]; ga.gene_type_single = True
+    payload = _extract.extract_ga_parameters(ga)
+    assert payload["gene_type"] == "custom"
+    assert payload["custom_gene_type"] == "[float, 2]"
+    ga.gene_type = [[int, None], [float, 2]]; ga.gene_type_single = False
+    assert _extract.extract_ga_parameters(ga)["custom_gene_type"] == "[[int, None], [float, 2]]"
+
+
+def test_derived_mutation_knobs_and_parsed_stop_criteria():
+    ga = _fake_ga()
+    ga.mutation_percent_genes = 10; ga.mutation_num_genes = 1
+    ga.stop_criteria = [["reach", [10.0, 20.0]], ["saturate", [5]]]
+    payload = _extract.extract_ga_parameters(ga)
+    assert payload["mutation_num_genes"] == 1
+    assert "mutation_percent_genes" not in payload
+    assert payload["stop_criteria"] == ["reach_10.0_20.0", "saturate_5"]
+    ga.mutation_probability = 0.2
+    payload = _extract.extract_ga_parameters(ga)
+    assert payload["mutation_probability"] == 0.2
+    assert "mutation_num_genes" not in payload
+
+
+def test_imported_result_marks_mixed_gene_types():
+    ga = _fake_ga(); ga.gene_type_single = False
+    assert _extract.extract_result(ga)["gene_type_single"] is False

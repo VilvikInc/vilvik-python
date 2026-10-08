@@ -162,7 +162,7 @@ class Webhook:
         return cls(
             id=str(data.get("id", "")),
             url=str(data.get("url", "") or ""),
-            event_types=list(data.get("event_types") or []),
+            event_types=list(data.get("events") or data.get("event_types") or []),
             is_active=bool(data.get("is_active", True)),
             created_at=_parse_dt(data.get("created_at")),
             raw=dict(data),

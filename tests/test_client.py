@@ -528,3 +528,9 @@ def test_run_context_manager_yields_result(mock_api, monkeypatch):
     ) as result:
         assert result.id == "res_q"
         assert result.best_fitness == 1.5
+
+
+def test_webhook_model_reads_rest_event_names():
+    from vilvik.models import Webhook
+    hook = Webhook.from_api({"id": "hook", "events": ["submission.succeeded"]})
+    assert hook.event_types == ["submission.succeeded"]

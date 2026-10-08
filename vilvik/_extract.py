@@ -22,11 +22,13 @@ def _jsonable(value: Any) -> Any:
     """Coerce numpy / exotic scalars + arrays to JSON-native types."""
     if value is None or isinstance(value, (bool, int, float, str)):
         return value
+    if isinstance(value, type):
+        return ("numpy." if value.__module__.startswith("numpy") else "") + value.__name__
     if hasattr(value, "tolist"):
-        return value.tolist()
+        return _jsonable(value.tolist())
     if hasattr(value, "item"):
         try:
-            return value.item()
+            return _jsonable(value.item())
         except Exception:
             pass
     if isinstance(value, (list, tuple)):
@@ -44,6 +46,25 @@ def extract_ga_parameters(ga: Any) -> Dict[str, Any]:
         val = getattr(ga, attr)
         if val is None:
             continue
+        if attr == "gene_type":
+            # PyGAD normalizes even the default float into [float, None].
+            # Preserve precision and per-gene types using the server's
+            # explicit custom_gene_type expression rather than JSON types.
+            single = getattr(ga, "gene_type_single", isinstance(val, type))
+            if single and isinstance(val, (list, tuple)) and len(val) == 2 and val[1] is None:
+                val = val[0]
+            if isinstance(val, type):
+                out[attr] = _jsonable(val)
+            else:
+                def expression(value):
+                    if isinstance(value, type):
+                        return _jsonable(value)
+                    if isinstance(value, (list, tuple)):
+                        return "[" + ", ".join(expression(v) for v in value) + "]"
+                    return repr(_jsonable(value))
+                out[attr] = "custom"
+                out["custom_gene_type"] = expression(val)
+            continue
         if isinstance(val, type):
             out[attr] = getattr(val, "__name__", str(val))
             continue
@@ -51,6 +72,20 @@ def extract_ga_parameters(ga: Any) -> Dict[str, Any]:
             # A custom operator callable can't transfer as a string knob; skip it.
             continue
         out[attr] = _jsonable(val)
+    # PyGAD retains the requested percentage alongside its derived count.
+    # The server accepts one mutation control; keep the effective control.
+    if out.get("mutation_probability") is not None:
+        out.pop("mutation_percent_genes", None)
+        out.pop("mutation_num_genes", None)
+    elif out.get("mutation_num_genes") is not None:
+        out.pop("mutation_percent_genes", None)
+    stops = out.get("stop_criteria")
+    if isinstance(stops, list):
+        out["stop_criteria"] = [
+            "_".join([stop[0]] + [str(v) for v in stop[1]])
+            if isinstance(stop, (list, tuple)) and len(stop) == 2 and isinstance(stop[1], (list, tuple))
+            else stop for stop in stops
+        ]
     return out
 
 
@@ -63,6 +98,7 @@ def extract_result(ga: Any, *, include_population: bool = True) -> Dict[str, Any
         "best_solutions_fitness": _jsonable(getattr(ga, "best_solutions_fitness", []) or []),
         "generations_completed": int(getattr(ga, "generations_completed", 0) or 0),
         "best_solution_generation": int(getattr(ga, "best_solution_generation", 0) or 0),
+        "gene_type_single": bool(getattr(ga, "gene_type_single", True)),
     }
     lgf = getattr(ga, "last_generation_fitness", None)
     if lgf is not None:
