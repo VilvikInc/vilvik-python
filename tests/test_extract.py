@@ -73,7 +73,7 @@ def test_normalized_gene_type_preserves_precision_and_mixed_types():
     assert payload["gene_type"] == "custom"
     assert payload["custom_gene_type"] == "[float, 2]"
     ga.gene_type = [[int, None], [float, 2]]; ga.gene_type_single = False
-    assert _extract.extract_ga_parameters(ga)["custom_gene_type"] == "[[int, None], [float, 2]]"
+    assert _extract.extract_ga_parameters(ga)["custom_gene_type"] == "[int, [float, 2]]"
 
 
 def test_derived_mutation_knobs_and_parsed_stop_criteria():

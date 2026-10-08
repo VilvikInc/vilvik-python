@@ -59,6 +59,9 @@ def extract_ga_parameters(ga: Any) -> Dict[str, Any]:
                 def expression(value):
                     if isinstance(value, type):
                         return _jsonable(value)
+                    if (isinstance(value, (list, tuple)) and len(value) == 2
+                            and isinstance(value[0], type) and value[1] is None):
+                        return expression(value[0])
                     if isinstance(value, (list, tuple)):
                         return "[" + ", ".join(expression(v) for v in value) + "]"
                     return repr(_jsonable(value))
