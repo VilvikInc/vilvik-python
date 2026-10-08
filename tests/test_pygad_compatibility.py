@@ -24,6 +24,10 @@ def multi_fitness(ga_instance, solution, solution_idx):
     return [float(sum(solution)), -float(sum(value * value for value in solution))]
 
 
+def batch_fitness(ga_instance, solutions, solution_indices):
+    return [float(sum(solution)) for solution in solutions]
+
+
 def on_start(ga_instance):
     ga_instance.exported_events = ["start"]
 
@@ -163,6 +167,23 @@ def test_multi_objective_results_and_stop_criteria(mock_api, client):
     continued = restore(payload)
     continued.run()
     assert continued.last_generation_fitness.shape == (4, 2)
+
+
+@pytest.mark.parametrize("options", [
+    {"fitness_func": batch_fitness, "fitness_batch_size": 2},
+    {"mutation_by_replacement": True, "save_best_solutions": True, "save_solutions": True},
+    {"parallel_processing": ["thread", 2]},
+])
+def test_execution_controls_preserve_constructor_semantics(options, mock_api, client):
+    ga = make_ga(**options)
+    ga.run()
+    payload = push_payload(ga, mock_api, client)
+    for name, value in options.items():
+        if name != "fitness_func":
+            assert payload["ga_parameters"].get(name) == value
+    continued = restore(payload)
+    continued.run()
+    assert continued.generations_completed == 1
 
 
 def test_all_lifecycle_callbacks_remain_executable(mock_api, client):

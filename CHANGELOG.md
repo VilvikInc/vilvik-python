@@ -139,3 +139,12 @@ First public release.
 [0.2.2]: https://github.com/VilvikInc/vilvik-python/releases/tag/v0.2.2
 [0.2.1]: https://github.com/VilvikInc/vilvik-python/releases/tag/v0.2.1
 [0.2.0]: https://github.com/VilvikInc/vilvik-python/releases/tag/v0.2.0
+# 0.5.4
+
+- Preserve batch fitness size, mutation by replacement, solution history flags
+  and parallel execution settings when importing a local PyGAD run. Batch
+  fitness continuations now receive the required batch size.
+- Add compatibility tests with real PyGAD runs, including reconstruction and
+  continuation of exported code and parameters.
+- Test released and development PyGAD versions in CI and run compatibility
+  tests before publishing releases.

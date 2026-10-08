@@ -15,6 +15,8 @@ GA_PARAM_ATTRS = (
     "mutation_num_genes", "mutation_probability", "random_mutation_min_val",
     "random_mutation_max_val", "keep_parents", "keep_elitism",
     "allow_duplicate_genes", "random_seed", "stop_criteria",
+    "fitness_batch_size", "mutation_by_replacement", "save_best_solutions",
+    "save_solutions", "parallel_processing",
 )
 
 
