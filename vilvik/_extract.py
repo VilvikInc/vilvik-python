@@ -81,11 +81,14 @@ def extract_ga_parameters(ga: Any) -> Dict[str, Any]:
         out.pop("mutation_percent_genes", None)
     stops = out.get("stop_criteria")
     if isinstance(stops, list):
-        out["stop_criteria"] = [
-            "_".join([stop[0]] + [str(v) for v in stop[1]])
-            if isinstance(stop, (list, tuple)) and len(stop) == 2 and isinstance(stop[1], (list, tuple))
-            else stop for stop in stops
-        ]
+        normalized = []
+        for stop in stops:
+            if isinstance(stop, (list, tuple)) and len(stop) >= 2:
+                values = stop[1] if len(stop) == 2 and isinstance(stop[1], (list, tuple)) else stop[1:]
+                normalized.append("_".join([stop[0]] + [str(v) for v in values]))
+            else:
+                normalized.append(stop)
+        out["stop_criteria"] = normalized
     return out
 
 

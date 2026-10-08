@@ -79,7 +79,7 @@ def test_normalized_gene_type_preserves_precision_and_mixed_types():
 def test_derived_mutation_knobs_and_parsed_stop_criteria():
     ga = _fake_ga()
     ga.mutation_percent_genes = 10; ga.mutation_num_genes = 1
-    ga.stop_criteria = [["reach", [10.0, 20.0]], ["saturate", [5]]]
+    ga.stop_criteria = [["reach", [10.0, 20.0]], ["saturate", 5]]
     payload = _extract.extract_ga_parameters(ga)
     assert payload["mutation_num_genes"] == 1
     assert "mutation_percent_genes" not in payload
