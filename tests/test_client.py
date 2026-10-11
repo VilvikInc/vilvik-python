@@ -311,7 +311,7 @@ def test_results_update_sends_only_provided_fields(mock_api, client):
 
 def test_wait_for_returns_result_when_submission_succeeds(mock_api, client, monkeypatch):
     monkeypatch.setattr("vilvik.client.time.sleep", lambda *_a, **_k: None)
-    # First poll: still running. Second poll: succeeded. Then list returns one row.
+    # The list row omits best_solution; the detail endpoint supplies it.
     mock_api.add(
         "GET",
         f"{BASE}/submissions/sub_abc",
@@ -332,8 +332,18 @@ def test_wait_for_returns_result_when_submission_succeeds(mock_api, client, monk
             "next": None,
         },
     )
+    mock_api.add(
+        "GET",
+        f"{BASE}/results/res_1",
+        json={"id": "res_1", "submission_id": "sub_abc",
+              "best_solution_fitness": "7.0", "best_solution": [1.0, 6.0],
+              "generations_completed": 20},
+    )
     r = client.results.wait_for("sub_abc", timeout=5, poll_interval=0)
     assert r.best_fitness == 7.0
+    assert r.best_solution == [1.0, 6.0]
+    assert r.num_generations_ran == 20
+    assert mock_api.calls[-1].request.url == f"{BASE}/results/res_1"
 
 
 def test_wait_for_raises_on_failed_submission(mock_api, client, monkeypatch):
@@ -510,6 +520,12 @@ def test_run_context_manager_yields_result(mock_api, monkeypatch):
             "next": None,
         },
     )
+    mock_api.add(
+        "GET",
+        f"{BASE}/results/res_q",
+        json={"id": "res_q", "submission_id": "sub_quick",
+              "best_solution_fitness": "1.5", "best_solution": [0.5, 1.0]},
+    )
     # The submission lookup at __exit__ time finds a terminal run, so no
     # DELETE is issued — `assert_all_requests_are_fired=False` keeps the
     # mock from complaining about unused matchers.
@@ -528,6 +544,7 @@ def test_run_context_manager_yields_result(mock_api, monkeypatch):
     ) as result:
         assert result.id == "res_q"
         assert result.best_fitness == 1.5
+        assert result.best_solution == [0.5, 1.0]
 
 
 def test_webhook_model_reads_rest_event_names():

@@ -265,7 +265,9 @@ class Results(_Resource):
                             "but no result row was returned."
                         ),
                     )
-                return page.items[0]
+                # List responses omit the solution vector. Fetch the detail so
+                # wait_for (and run) returns the complete optimization result.
+                return self.get(page.items[0].id)
 
             if time.monotonic() >= deadline:
                 raise VilvikTimeout(

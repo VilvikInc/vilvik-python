@@ -4,6 +4,14 @@ All notable changes to the `vilvik` Python SDK are recorded here. The format
 follows [Keep a Changelog](https://keepachangelog.com/), and the project uses
 [semantic versioning](https://semver.org/).
 
+## [0.5.5]
+
+### Fixed
+
+- Fetch the full result detail after `results.wait_for()` observes completion.
+  The waiter and `vilvik.run()` now return the best solution vector instead of
+  the lightweight result-list row.
+
 ## [0.5.4]
 
 ### Fixed
