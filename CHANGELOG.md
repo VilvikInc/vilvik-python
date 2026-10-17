@@ -4,6 +4,27 @@ All notable changes to the `vilvik` Python SDK are recorded here. The format
 follows [Keep a Changelog](https://keepachangelog.com/), and the project uses
 [semantic versioning](https://semver.org/).
 
+## [0.5.6]
+
+### Fixed
+
+- `vilvik.push()` failed with "Object of type range is not JSON serializable"
+  when a gene space used `range`, the usual way to list categorical values.
+  A `range` is now sent as `{"low", "high", "step"}`, which allows the same
+  values and stays compact for long ranges.
+- Importing a local run dropped `sbx_crossover_eta`, `polynomial_mutation_eta`
+  and `nsga3_num_divisions`, so a continued run used the default values.
+  They are now exported.
+
+### Added
+
+- Export PyGAD 3.9's `gene_categorical` when any gene is categorical, so SBX
+  crossover and polynomial mutation keep treating those genes as unordered
+  choices after the run is continued on Vilvik.
+- Compatibility tests for categorical genes, operator tuning and `range` gene
+  spaces with real PyGAD runs. Tests that need a newer PyGAD skip on older
+  releases.
+
 ## [0.5.5]
 
 ### Fixed
