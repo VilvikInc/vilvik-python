@@ -295,3 +295,59 @@ def test_captured_source_supports_current_pygad_wrapper(mock_api, client):
     assert payload["origin"]["client"] == "pygad_wrapper"
     assert payload["origin"]["pygad_version"] == pygad.__version__
     restore(payload).run()
+
+
+# PyGAD enforces a constraint when it picks a value for that gene, so a rule
+# reading other genes is not rechecked later. Run assertions use constraints
+# on each gene's own values.
+def below_five(solution, values):
+    return [value for value in values if value < 5]
+
+
+def even_only(solution, values):
+    return [value for value in values if value % 2 == 0]
+
+
+def test_gene_constraint_and_sample_size_round_trip(mock_api, client):
+    constraints = [None, below_five, even_only]
+    ga = make_ga(gene_space={"low": 0, "high": 10, "step": 1}, gene_type=int,
+                 gene_constraint=constraints, sample_size=50)
+    ga.run()
+    payload = push_payload(ga, mock_api, client)
+    assert payload["ga_parameters"]["sample_size"] == 50
+    assert payload["code"]["gene_constraint_entry"] == "gene_constraint"
+    assert "def below_five" in payload["code"]["gene_constraint"]
+    assert "gene_constraint = [None, below_five, even_only]" in payload["code"]["gene_constraint"]
+    continued = restore(payload)
+    assert continued.sample_size == 50
+    continued.run()
+    population = np.asarray(continued.population)
+    assert (population[:, 1] < 5).all()
+    assert (population[:, 2] % 2 == 0).all()
+
+
+def test_repeated_constraint_function_is_defined_once(mock_api, client):
+    ga = make_ga(gene_space={"low": 0, "high": 10, "step": 1}, gene_type=int,
+                 gene_constraint=[even_only, None, even_only])
+    ga.run()
+    source = push_payload(ga, mock_api, client)["code"]["gene_constraint"]
+    assert source.count("def even_only") == 1
+    assert "gene_constraint = [even_only, None, even_only]" in source
+
+
+def test_lambda_gene_constraint_needs_manual_source(mock_api, client):
+    ga = make_ga(gene_space={"low": 0, "high": 10, "step": 1}, gene_type=int,
+                 gene_constraint=[None, lambda solution, values: values, None])
+    ga.run()
+    with pytest.raises(vilvik.CaptureError, match="gene_constraint: NEEDS MANUAL .*item 1 it is a lambda"):
+        vilvik.push(ga, client=client)
+    source = "limits = [None, lambda solution, values: [v for v in values if v < 5], None]\n"
+    payload = push_payload(ga, mock_api, client, callbacks={"gene_constraint": source})
+    # The fitness function's imports are prepended to every code block.
+    assert payload["code"]["gene_constraint"].endswith(source)
+    assert payload["code"]["gene_constraint_entry"] == "limits"
+    restored = restore(payload)
+    restored.run()
+    if PYGAD_VERSION >= (3, 7):
+        # PyGAD 3.7 started applying constraints to a supplied initial population.
+        assert (np.asarray(restored.population)[:, 1] < 5).all()

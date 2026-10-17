@@ -105,7 +105,7 @@ class Submissions(_Resource):
             entry_key = f"{role}_entry"
             if body.get(entry_key):
                 continue
-            detected = _detect_entry_from_source(source)
+            detected = _detect_entry_from_source(source, role)
             if detected:
                 body[entry_key] = detected
 

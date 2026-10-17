@@ -167,3 +167,11 @@ def test_explicit_preamble_skips_autoscan():
     report = _capture.capture_code(ga, preamble="import math as _math_alias")
     assert report.preamble == "import math as _math_alias"
     assert "def _helper_double" not in report.preamble
+
+
+def test_list_role_entry_detection_includes_assignments():
+    from vilvik._capture import _detect_entry_from_source
+    source = "def helper(solution, values):\n    return values\n\nlimits = [None, helper]\n"
+    assert _detect_entry_from_source(source, "gene_constraint") == "limits"
+    assert _detect_entry_from_source(source) == "helper"
+    assert _detect_entry_from_source(source, "on_start") == "helper"

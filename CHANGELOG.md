@@ -4,6 +4,23 @@ All notable changes to the `vilvik` Python SDK are recorded here. The format
 follows [Keep a Changelog](https://keepachangelog.com/), and the project uses
 [semantic versioning](https://semver.org/).
 
+## [0.5.7]
+
+### Added
+
+- `vilvik.push()` exports PyGAD's `gene_constraint`. When every entry is
+  `None` or a module-level function, the SDK sends each function's source
+  once plus the list, so a run continued on Vilvik keeps the same
+  constraints. A lambda in the list is reported as needing manual source;
+  pass it with `callbacks={"gene_constraint": "<source that defines the list>"}`.
+- `sample_size` is exported with the other GA parameters.
+- `client.submissions.create(gene_constraint=...)` fills in
+  `gene_constraint_entry` from the last top-level name the source defines,
+  including a plain assignment such as `limits = [None, below_five]`.
+
+These need a Vilvik server that accepts `gene_constraint` and
+`sample_size`.
+
 ## [0.5.6]
 
 ### Fixed

@@ -20,7 +20,7 @@ from vilvik import _extract
 # Sent as Python source in the payload's `code` block.
 CAPTURED_AS_CODE = {
     "fitness_func", "on_start", "on_fitness", "on_parents", "on_crossover",
-    "on_mutation", "on_generation", "on_stop",
+    "on_mutation", "on_generation", "on_stop", "gene_constraint",
 }
 
 # Deliberately not sent as a GA parameter.
@@ -32,10 +32,7 @@ NOT_EXPORTED = {
 
 # PyGAD supports these but Vilvik cannot run them yet. Export them once the
 # server accepts them.
-NOT_SUPPORTED_BY_VILVIK = {
-    "gene_constraint": "a list of Python callables; Vilvik has no gene_constraint setting",
-    "sample_size": "Vilvik has no sample_size setting",
-}
+NOT_SUPPORTED_BY_VILVIK = {}
 
 
 PYGAD_VERSION = tuple(int(part) for part in pygad.__version__.split(".")[:2])

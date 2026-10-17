@@ -41,7 +41,12 @@ def capture_callable_source(obj) -> Tuple[Optional[str], Optional[str], str]:
 CODE_ROLES = (
     "fitness_func", "on_start", "on_fitness", "on_parents",
     "on_crossover", "on_mutation", "on_generation", "on_stop",
+    "gene_constraint",
 )
+
+# Roles whose code defines a list (one function or None per gene) instead of
+# a single callable. Their entry names the list.
+LIST_ROLES = ("gene_constraint",)
 
 
 @dataclass
@@ -83,6 +88,9 @@ class CaptureReport:
                 line += f" ({r.reason}). Pass it explicitly, e.g. "
                 if r.role == "fitness_func":
                     line += "vilvik.push(ga, fitness_func=my_fn) or fitness_source='...'."
+                elif r.role in LIST_ROLES:
+                    line += (f"vilvik.push(ga, callbacks={{'{r.role}': [named_fn_or_None, ...]}}) "
+                             f"or source that defines the list.")
                 else:
                     line += f"vilvik.push(ga, callbacks={{'{r.role}': my_fn_or_source}})."
             lines.append(line)
@@ -93,7 +101,7 @@ class CaptureReport:
         return "\n".join(lines)
 
 
-def _detect_entry_from_source(source: str) -> Optional[str]:
+def _detect_entry_from_source(source: str, role: Optional[str] = None) -> Optional[str]:
     try:
         tree = ast.parse(source)
     except SyntaxError:
@@ -102,14 +110,53 @@ def _detect_entry_from_source(source: str) -> Optional[str]:
     for node in tree.body:
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
             name = node.name
+        elif role in LIST_ROLES and isinstance(node, (ast.Assign, ast.AnnAssign)):
+            targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+            names = [t.id for t in targets if isinstance(t, ast.Name)]
+            if names:
+                name = names[-1]
     return name
+
+
+def _resolve_list_role(role: str, value: Any) -> RoleCapture:
+    """Capture a per-gene list of named functions (or None) as source.
+
+    The source defines each function once and then the list itself, so the
+    server can exec it and look up the list by name, exactly as PyGAD
+    received it.
+    """
+    if not isinstance(value, (list, tuple)):
+        return RoleCapture(role, None, None, "unresolved", "it is not a list of functions")
+    sources: List[str] = []
+    names: List[str] = []
+    seen: Dict[int, str] = {}
+    for index, item in enumerate(value):
+        if item is None:
+            names.append("None")
+            continue
+        if id(item) in seen:
+            names.append(seen[id(item)])
+            continue
+        src, entry, reason = capture_callable_source(item)
+        if src is None:
+            return RoleCapture(role, None, None, "unresolved", f"item {index} {reason}")
+        seen[id(item)] = entry
+        sources.append(src.rstrip())
+        names.append(entry)
+    body = "\n\n\n".join(sources + [f"{role} = [{', '.join(names)}]"]) + "\n"
+    return RoleCapture(role, body, role, "auto")
 
 
 def _resolve_one(role: str, ga: Any, override: Any, override_entry: Optional[str] = None) -> RoleCapture:
     if override is not None:
         if isinstance(override, str):
-            entry = override_entry or _detect_entry_from_source(override) or role
+            entry = override_entry or _detect_entry_from_source(override, role) or role
             return RoleCapture(role, override, entry, "override")
+        if role in LIST_ROLES:
+            capture = _resolve_list_role(role, override)
+            if capture.provenance == "auto":
+                capture.provenance = "override"
+            return capture
         src, entry, reason = capture_callable_source(override)
         if src is None:
             return RoleCapture(role, None, None, "unresolved", reason)
@@ -117,6 +164,8 @@ def _resolve_one(role: str, ga: Any, override: Any, override_entry: Optional[str
     obj = getattr(ga, role, None)
     if obj is None:
         return RoleCapture(role, None, None, "absent")
+    if role in LIST_ROLES:
+        return _resolve_list_role(role, obj)
     src, entry, reason = capture_callable_source(obj)
     if src is None:
         return RoleCapture(role, None, None, "unresolved", reason)

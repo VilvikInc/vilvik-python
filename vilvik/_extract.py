@@ -18,6 +18,7 @@ GA_PARAM_ATTRS = (
     "fitness_batch_size", "mutation_by_replacement", "save_best_solutions",
     "save_solutions", "parallel_processing", "sbx_crossover_eta",
     "polynomial_mutation_eta", "nsga3_num_divisions", "gene_categorical",
+    "sample_size",
 )
 
 

@@ -551,3 +551,17 @@ def test_webhook_model_reads_rest_event_names():
     from vilvik.models import Webhook
     hook = Webhook.from_api({"id": "hook", "events": ["submission.succeeded"]})
     assert hook.event_types == ["submission.succeeded"]
+
+
+def test_submissions_create_names_the_gene_constraint_list(mock_api, client):
+    mock_api.add("POST", f"{BASE}/submissions", status=202,
+                 json={"id": "sub_c", "status": "queued", "created_at": "2026-10-17T10:00:00Z"})
+    client.submissions.create(
+        fitness_func="def fitness_func(g, s, i): return 0",
+        gene_constraint="def above(solution, values):\n    return values\n\nlimits = [None, above]\n",
+        num_genes=2, num_generations=5, sample_size=200,
+    )
+    body = json.loads(mock_api.calls[0].request.body)
+    assert body["fitness_func_entry"] == "fitness_func"
+    assert body["gene_constraint_entry"] == "limits"
+    assert body["sample_size"] == 200
