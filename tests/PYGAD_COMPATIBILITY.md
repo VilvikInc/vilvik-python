@@ -8,7 +8,8 @@ execution. No production or beta credentials are used.
 Coverage includes default/integer/NumPy/precision/mixed gene types, populations
 and best results, scalar/multiple objectives, parsed stop criteria, default
 and adaptive mutation controls, all seven lifecycle callbacks, NumPy gene
-spaces, population opt-out, dry runs and explicit fitness source overrides.
+spaces, `range` gene spaces, SBX/polynomial/NSGA-III tuning, PyGAD 3.9
+categorical genes, population opt-out, dry runs and explicit fitness source overrides.
 Batch fitness size, mutation by replacement, saved solutions and thread
 parallelism are checked for both export fidelity and executable continuation.
 Exported constructor parameters and code reconstruct a GA that runs another

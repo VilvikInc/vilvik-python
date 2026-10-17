@@ -212,6 +212,65 @@ def test_per_gene_space_numpy_values_and_population_opt_out(mock_api, client):
     assert payload["result"]["generations_completed"] == 2
 
 
+def test_range_gene_space_exports_as_json_step_dict(mock_api, client):
+    ga = make_ga(gene_space=[range(5), range(10, 30, 5), [0, 1]], gene_type=int)
+    ga.run()
+    payload = push_payload(ga, mock_api, client)
+    assert payload["ga_parameters"]["gene_space"][:2] == [
+        {"low": 0, "high": 5, "step": 1}, {"low": 10, "high": 30, "step": 5}]
+    continued = restore(payload)
+    continued.run()
+    population = np.asarray(continued.population)
+    assert set(population[:, 0]).issubset(range(5))
+    assert set(population[:, 1]).issubset(range(10, 30, 5))
+
+
+PYGAD_VERSION = tuple(int(part) for part in pygad.__version__.split(".")[:2])
+
+
+@pytest.mark.skipif(PYGAD_VERSION < (3, 7), reason="SBX, polynomial mutation and NSGA-III arrived in PyGAD 3.7.0")
+def test_operator_tuning_parameters_are_exported(mock_api, client):
+    ga = make_ga(crossover_type="sbx", sbx_crossover_eta=7,
+                 mutation_type="polynomial", polynomial_mutation_eta=9)
+    ga.run()
+    payload = push_payload(ga, mock_api, client)
+    assert payload["ga_parameters"]["sbx_crossover_eta"] == 7
+    assert payload["ga_parameters"]["polynomial_mutation_eta"] == 9
+    continued = restore(payload)
+    assert continued.sbx_crossover_eta == 7
+    assert continued.polynomial_mutation_eta == 9
+    continued.run()
+
+    ga = make_ga(fitness_func=multi_fitness, sol_per_pop=6,
+                 parent_selection_type="nsga3", nsga3_num_divisions=4)
+    ga.run()
+    payload = push_payload(ga, mock_api, client)
+    assert payload["ga_parameters"]["nsga3_num_divisions"] == 4
+    restore(payload).run()
+
+
+@pytest.mark.skipif(PYGAD_VERSION < (3, 9), reason="gene_categorical arrived in PyGAD 3.9.0")
+def test_categorical_genes_are_exported_and_reconstructed(mock_api, client):
+    ga = make_ga(gene_space=[[0, 1, 2], range(4), {"low": 0, "high": 1}],
+                 gene_type=[int, int, float], gene_categorical=[True, True, False],
+                 crossover_type="sbx", mutation_type="polynomial")
+    ga.run()
+    payload = push_payload(ga, mock_api, client)
+    assert payload["ga_parameters"]["gene_categorical"] == [True, True, False]
+    continued = restore(payload)
+    assert continued.gene_categorical == [True, True, False]
+    continued.run()
+
+
+@pytest.mark.skipif(PYGAD_VERSION < (3, 9), reason="gene_categorical arrived in PyGAD 3.9.0")
+def test_all_ordered_genes_omit_gene_categorical(mock_api, client):
+    ga = make_ga()
+    ga.run()
+    assert ga.gene_categorical == [False, False, False]
+    payload = push_payload(ga, mock_api, client)
+    assert "gene_categorical" not in payload["ga_parameters"]
+
+
 def test_real_ga_dry_run_and_capture_override(mock_api, client):
     ga = make_ga(fitness_func=lambda ga, solution, index: float(sum(solution)))
     ga.run()

@@ -16,7 +16,8 @@ GA_PARAM_ATTRS = (
     "random_mutation_max_val", "keep_parents", "keep_elitism",
     "allow_duplicate_genes", "random_seed", "stop_criteria",
     "fitness_batch_size", "mutation_by_replacement", "save_best_solutions",
-    "save_solutions", "parallel_processing",
+    "save_solutions", "parallel_processing", "sbx_crossover_eta",
+    "polynomial_mutation_eta", "nsga3_num_divisions", "gene_categorical",
 )
 
 
@@ -24,6 +25,12 @@ def _jsonable(value: Any) -> Any:
     """Coerce numpy / exotic scalars + arrays to JSON-native types."""
     if value is None or isinstance(value, (bool, int, float, str)):
         return value
+    if isinstance(value, range):
+        # JSON has no range. A dict with a step keeps the same allowed values,
+        # stays compact for long ranges and is still a finite gene space.
+        if value.step > 0:
+            return {"low": value.start, "high": value.stop, "step": value.step}
+        return list(value)
     if isinstance(value, type):
         return ("numpy." if value.__module__.startswith("numpy") else "") + value.__name__
     if hasattr(value, "tolist"):
@@ -69,6 +76,11 @@ def extract_ga_parameters(ga: Any) -> Dict[str, Any]:
                     return repr(_jsonable(value))
                 out[attr] = "custom"
                 out["custom_gene_type"] = expression(val)
+            continue
+        if attr == "gene_categorical":
+            # PyGAD stores one flag per gene, all False unless requested.
+            if any(val):
+                out[attr] = [bool(flag) for flag in val]
             continue
         if isinstance(val, type):
             out[attr] = getattr(val, "__name__", str(val))
