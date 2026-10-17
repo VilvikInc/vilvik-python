@@ -23,12 +23,30 @@ python -m pytest -q
 
 The dedicated GitHub workflow tests the current SDK with PyGAD 3.6.0, latest
 PyPI PyGAD, and PyGAD's `master` branch on Python 3.9/3.12. It runs on pushes,
-pull requests, every Monday, and manually. All SDK tests run in each job.
+pull requests, daily, and manually. All SDK tests run in each job.
 The ordinary SDK workflow also installs the compatibility extra, so the real
 PyGAD tests run on every supported Python version, 3.9 through 3.12. These
 compatibility jobs should pass before an SDK release. PyGAD has the reciprocal
-workflow against released and development SDK versions. Weekly jobs detect
-upstream releases even without commits in this repository.
+workflow against released and development SDK versions. The daily run detects
+a new PyGAD release or a change on PyGAD's `master` within a day, even without
+commits in this repository.
+
+## New PyGAD parameters
+
+`test_pygad_parameter_coverage.py` reads the parameters of `pygad.GA.__init__`
+and fails when one is not exported (`GA_PARAM_ATTRS` in `vilvik/_extract.py`),
+captured as code, or listed in that file with a reason. Against PyGAD's
+`master` this flags a new parameter before PyGAD releases it. On PyGAD 3.9 and
+newer it also fails when a parameter the SDK knows is removed or renamed. It
+also checks that varied gene spaces (`range`, NumPy arrays, tuples, NumPy
+scalars, `None` entries) export as strict JSON and rebuild a runnable GA.
+
+When a scheduled or manual run fails, the workflow opens an issue labelled
+`pygad-compatibility`, or comments on the open one, with the unhandled
+parameters for latest and development PyGAD and a link to the run. Close the
+issue once the SDK handles them. PyGAD releases are never blocked by this.
+Run `python tests/test_pygad_parameter_coverage.py` to print the same report
+locally.
 
 PyGAD 3.6.0 predates the `GA.push_to_vilvik()` wrapper. Only that wrapper case
 is explicitly skipped for 3.6.0; `vilvik.push()` and the other compatibility

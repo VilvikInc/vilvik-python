@@ -1,11 +1,16 @@
 name: PyGAD compatibility
 
+# Runs daily so a new PyGAD release (latest) or a change on PyGAD's master
+# (development) is tested within a day without any link from the PyGAD repo.
+# A failing scheduled or manual run opens an issue, or comments on the open
+# one, listing the constructor parameters the SDK does not handle yet.
+
 on:
   push:
     branches: [main]
   pull_request:
   schedule:
-    - cron: '43 8 * * 1'
+    - cron: '43 8 * * *'
   workflow_dispatch:
 
 permissions:
@@ -40,3 +45,51 @@ jobs:
         run: |
           python -c "import pygad, vilvik, numpy; print('PyGAD', pygad.__version__, 'SDK', vilvik.__version__)"
           python -m pytest -q -ra
+
+  report:
+    needs: compatibility
+    if: failure() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Describe the gaps for latest and development PyGAD
+        run: |
+          python -m pip install -e '.[dev]'
+          {
+            echo "The daily PyGAD compatibility run failed: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            echo
+            for channel in latest development; do
+              case "$channel" in
+                latest) python -m pip install -q --upgrade pygad ;;
+                development) python -m pip install -q --force-reinstall --no-deps 'git+https://github.com/ahmedfgad/GeneticAlgorithmPython.git@master' ;;
+              esac
+              echo "### PyGAD $channel"
+              echo
+              python tests/test_pygad_parameter_coverage.py || echo "The parameter report could not run; see the run log."
+              echo
+            done
+            echo "PyGAD release notes: https://pygad.readthedocs.io/en/latest/releases.html"
+            echo
+            echo "To fix: export each new parameter in \`vilvik/_extract.py\` (\`GA_PARAM_ATTRS\`) with a test in \`tests/test_pygad_compatibility.py\`, or classify it in \`tests/test_pygad_parameter_coverage.py\`. If the Vilvik server must accept it first, update the server too."
+          } > report.md
+          cat report.md
+      - name: Open or update the compatibility issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          label=pygad-compatibility
+          gh label create "$label" --color FBCA04 \
+            --description "A PyGAD change the SDK does not handle yet" 2>/dev/null || true
+          number=$(gh issue list --label "$label" --state open --limit 1 --json number --jq '.[0].number // empty')
+          if [ -n "$number" ]; then
+            gh issue comment "$number" --body-file report.md
+          else
+            gh issue create --title "PyGAD compatibility check failed" \
+              --label "$label" --body-file report.md
+          fi
