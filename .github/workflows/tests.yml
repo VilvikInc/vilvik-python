@@ -1,9 +1,9 @@
 name: tests
 
 on:
-  push:
-    branches: [main]
-  pull_request:
+  # Manual runs only (Actions tab or `gh workflow run`), so pushes and
+  # schedules don't spend paid Actions minutes.
+  workflow_dispatch:
 
 jobs:
   test:

@@ -6,11 +6,8 @@ name: PyGAD compatibility
 # one, listing the constructor parameters the SDK does not handle yet.
 
 on:
-  push:
-    branches: [main]
-  pull_request:
-  schedule:
-    - cron: '43 8 * * *'
+  # Manual runs only (Actions tab or `gh workflow run`), so pushes and
+  # schedules don't spend paid Actions minutes.
   workflow_dispatch:
 
 permissions:
